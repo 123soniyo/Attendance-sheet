@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attendance Sheet</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  th, td {
+    border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+  }
+  th {
+    background-color: #f2f2f2;
+  }
+  .present-checkbox {
+    width: 20px;
+    height: 20px;
+  }
+  .absent-checkbox {
+    width: 20px;
+    height: 20px;
+  }
+  .present-checkbox:checked + label.present,
+  .absent-checkbox:checked + label.absent {
+    font-weight: bold;
+  }
+  .present-checkbox:checked + label.present {
+    color: green;
+  }
+  .absent-checkbox:checked + label.absent {
+    color: red;
+  }
+</style>
+</head>
+<body>
+  <h2>Attendance Sheet</h2>
+  <label for="date">Select Date:</label>
+  <input type="date" id="date">
+  <button onclick="renderAttendance()">Render Attendance</button>
+  <div id="attendanceTable"></div>
+  <button onclick="submitAttendance()">Submit Attendance</button>
+  <div id="attendanceResult"></div>
+  <button onclick="generateAttendanceSummary()">Generate Attendance Summary</button>
+
+  <script>
+    const students = ['Shruti', 'Vivek', 'John', 'Alice']; // Sample student list
+    let totalAttendanceDays = 0;
+    let attendanceCounts = {};
+
+    function renderAttendance() {
+      const dateInput = document.getElementById('date').value;
+      const storedData = localStorage.getItem(dateInput);
+      let attendanceData = {};
+      if (storedData) {
+        attendanceData = JSON.parse(storedData);
+      }
+      let tableHTML = '<table>';
+      tableHTML += '<tr><th>Name</th><th>Present</th><th>Absent</th></tr>';
+      students.forEach(student => {
+        const presentChecked = attendanceData[student] === 'Present' ? 'checked' : '';
+        const absentChecked = attendanceData[student] === 'Absent' ? 'checked' : '';
+        tableHTML += `<tr><td>${student}</td><td><input type="checkbox" class="present-checkbox" id="${student}_present" name="${student}" value="Present" ${presentChecked}><label for="${student}_present" class="present">Present</label></td><td><input type="checkbox" class="absent-checkbox" id="${student}_absent" name="${student}" value="Absent" ${absentChecked}><label for="${student}_absent" class="absent">Absent</label></td></tr>`;
+      });
+      tableHTML += '</table>';
+      document.getElementById('attendanceTable').innerHTML = tableHTML;
+
+      // Add event listeners to checkboxes to ensure only one can be checked
+      document.querySelectorAll('.present-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+          const student = checkbox.getAttribute('name');
+          const absentCheckbox = document.getElementById(`${student}_absent`);
+          if (this.checked) {
+            absentCheckbox.checked = false;
+          }
+        });
+      });
+
+      document.querySelectorAll('.absent-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+          const student = checkbox.getAttribute('name');
+          const presentCheckbox = document.getElementById(`${student}_present`);
+          if (this.checked) {
+            presentCheckbox.checked = false;
+          }
+        });
+      });
+    }
+
+    function submitAttendance() {
+      const dateInput = document.getElementById('date').value;
+      const attendanceData = getAttendance();
+      if (attendanceData) {
+        localStorage.setItem(dateInput, JSON.stringify(attendanceData));
+        renderAttendanceResult(attendanceData);
+        updateAttendanceCounts(attendanceData);
+      } else {
+        alert('Please mark attendance for all students.');
+      }
+    }
+
+    function getAttendance() {
+      const attendance = {};
+      let allStudentsMarked = true;
+      students.forEach(student => {
+        const presentCheckbox = document.getElementById(`${student}_present`);
+        const absentCheckbox = document.getElementById(`${student}_absent`);
+        if (presentCheckbox.checked) {
+          attendance[student] = 'Present';
+        } else if (absentCheckbox.checked) {
+          attendance[student] = 'Absent';
+        } else {
+          allStudentsMarked = false;
+          return;
+        }
+      });
+      return allStudentsMarked ? attendance : null;
+    }
+
+    function renderAttendanceResult(attendanceData) {
+      let resultHTML = '<h3>Attendance Result:</h3><ul>';
+      for (const student in attendanceData) {
+        if (attendanceData.hasOwnProperty(student)) {
+          const color = attendanceData[student] === 'Present' ? 'green' : 'red';
+          resultHTML += `<li>${student} - <span style="color: ${color};">${attendanceData[student]}</span></li>`;
+        }
+      }
+      resultHTML += '</ul>';
+      document.getElementById('attendanceResult').innerHTML = resultHTML;
+    }
+
+    function updateAttendanceCounts(attendanceData) {
+      totalAttendanceDays++;
+      students.forEach(student => {
+        if (attendanceData.hasOwnProperty(student)) {
+          attendanceCounts[student] = attendanceCounts[student] || { present: 0, absent: 0 };
+          if (attendanceData[student] === 'Present') {
+            attendanceCounts[student].present++;
+          } else {
+            attendanceCounts[student].absent++;
+          }
+        }
+      });
+    }
+
+    function generateAttendanceSummary() {
+      let summaryHTML = '<h3>Attendance Summary:</h3><ul>';
+      students.forEach(student => {
+        const totalPresent = attendanceCounts[student] ? attendanceCounts[student].present : 0;
+        const totalAbsent = attendanceCounts[student] ? attendanceCounts[student].absent : 0;
+        const percentage = totalAttendanceDays === 0 ? 0 : (totalPresent / totalAttendanceDays) * 100;
+        summaryHTML += `<li>${student} - Total Present: ${totalPresent}, Total Absent: ${totalAbsent}, Percentage: ${percentage.toFixed(2)}%</li>`;
+      });
+      summaryHTML += '</ul>';
+      document.getElementById('attendanceResult').innerHTML = summaryHTML;
+    }
+
+    document.getElementById('date').addEventListener('change', renderAttendance);
+  </script>
+</body>
+</html>
